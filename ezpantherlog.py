@@ -50,12 +50,12 @@ def _validate_logs(ctx: Optional, param: Optional, value: str) -> str:
         )
 
     with open(value, "r") as file:
-        for line in file:
+        for num, line in enumerate(file, start=1):
             try:
                 ujson.loads(line)
             except ValueError:
                 raise LogFormatError(
-                    "The JSON sample failed to be loaded, is the JSON valid?"
+                    f"The JSON sample on line {num} failed to be loaded, is the JSON valid?"
                 )
 
     return value
