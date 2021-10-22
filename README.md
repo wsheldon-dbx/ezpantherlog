@@ -2,6 +2,7 @@
 
 Automatically create runpanther.io schemas based on a sample of JSON logs.
 
+## Usage:
 ```
 Usage: ezpantherlog.py [OPTIONS]
 
@@ -23,5 +24,27 @@ Options:
 ```
 
 
-Example:
+## Example:
+
+```
+python3 ezpantherlog.py --logs=/tmp/corpnet.jsonl \
+                        --schema-file-name=vpn \
+                        --schema-name=Custom.VPN \
+                        --event-time-field=syslogTimestamp \
+                        --pantherlog-dir=/Users/wsheldon/Tools/pantherlog1.21
+
+✨ Starting...
+💥 Inferring your schema
+🔥 Parsing your logs
+💫 Testing your schema
+🌟 All tests passed!
+
+   -> /Users/wsheldon/Tools/ezpantherlog/vpn.yml
+   -> /Users/wsheldon/Tools/ezpantherlog/vpn_tests.yml
+
+🚨 Remember to update your schema file with indicators.
+
+   Reference:
+    - https://docs.runpanther.io/development/writing-parsers#indicator-strings
+    - https://docs.runpanther.io/data-onboarding/custom-log-types/reference#indicators
 ```
