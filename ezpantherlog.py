@@ -83,7 +83,7 @@ def _validate_time_format(ctx: Optional, param: Optional, value: str) -> str:
         'unix_ns',
     ]
 
-    if value not in BUILT_IN_FORMATS:
+    if value not in BUILT_IN_FORMATS and value is not None:
         raise TimeFormatError(f"{value} is not a valid time format, must be one of {BUILT_IN_FORMATS}")
 
     return value
@@ -197,6 +197,7 @@ def main(
         for field in schema["fields"]:
             if field["name"] == event_time_field:
                 field["isEventTime"] = True
+                field["type"] = "timestamp"
 
                 if time_format:
                     field["timeFormat"] = time_format
@@ -205,6 +206,7 @@ def main(
                 for jfield in json_field:
                     if field["name"] == jfield:
                         field["type"] = "json"
+                        del field["fields"]
 
     if schema:
         with open(schema_file, "w") as yamlfile:
