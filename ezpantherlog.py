@@ -4,7 +4,6 @@ import time
 import json
 import subprocess
 import ruamel.yaml
-from datetime import datetime
 from typing import Optional, List, Union, Any
 
 import click
