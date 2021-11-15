@@ -148,7 +148,7 @@ def _is_event_time_field_missing(schema: dict, event_time_field: str) -> bool:
     prompt=False,
     type=str,
     multiple=True,
-    help="Any valid JSON value (JSON object, array, number, string, boolean)",
+    help="Converts a type of 'object' to a type of 'json', specify the name of the field to convert.",
 )
 def main(
     logs: str,
