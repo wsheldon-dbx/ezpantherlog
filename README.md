@@ -10,16 +10,28 @@ Options:
   --logs PATH              The sample of logs you are building a schema for;
                            evaluated relative to the current path, not the git
                            root.  [required]
+
   --pantherlog-dir PATH    The full path to your pantherlog binary; evaluated
                            relative to the current path, not the git root.
                            [required]
+
   --schema-name TEXT       The name of the schema to use for the `schema` key
                            in your schema file; if you don't add `Custom.` we
                            add it for you.  [required]
+
   --schema-file-name TEXT  The name to give your schema file; example: ldap
                            [required]
+
   --event-time-field TEXT  The field that will be used as your isEventTime
                            key.  [required]
+
+  --time-format TEXT       Timestamps are defined by setting the type field to
+                           timestamp and specifying the timestamp format using
+                           the timeFormat field.
+
+  --json-field TEXT        Any valid JSON value (JSON object, array, number,
+                           string, boolean)
+
   --help                   Show this message and exit.
 ```
 
@@ -27,11 +39,15 @@ Options:
 ## Example:
 
 ```
-python3 ezpantherlog.py --logs=/tmp/corpnet.jsonl \
-                        --schema-file-name=vpn \
-                        --schema-name=Custom.VPN \
+python3 ezpantherlog.py --pantherlog-dir=/Users/wsheldon/Tools/pantherlog1.21 \
                         --event-time-field=syslogTimestamp \
-                        --pantherlog-dir=/Users/wsheldon/Tools/pantherlog1.21
+                        --logs=/tmp/corpnet.jsonl \
+                        --schema-name=Custom.VPN \
+                        --schema-file-name=vpn \
+                        --time-format=rfc3339 \
+                        --json-field=message \
+                        --json-field=appName
+                        
 
 ✨ Starting...
 💥 Inferring your schema
