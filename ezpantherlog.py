@@ -5,6 +5,7 @@ import json
 import itertools
 import subprocess
 import ruamel.yaml
+from pathlib import Path
 from typing import Optional, List, Union, Any
 
 import click
@@ -36,6 +37,10 @@ class PantherlogParseError(Exception):
 
 
 class PantherlogTestError(Exception):
+    pass
+
+
+class PantherlogDirError(Exception):
     pass
 
 
@@ -83,13 +88,6 @@ def _validate_schema_name(ctx: Optional, param: Optional, value: str) -> str:
         raise SchemaNameError(f"{value} must start with a capital letter.")
 
     return value
-
-
-def _try_load_pantherlog_config(yaml) -> str:
-    with open("ezpantherlog.yaml", "r") as config:
-        cfg = yaml.load(config)
-
-    return cfg["pantherlog_dir"]
 
 
 def _validate_indicator_field(ctx: Optional, param: Optional, value: str) -> str:
@@ -147,6 +145,29 @@ def _is_ioc_field_missing(schema: dict, indicator_field: tuple) -> None:
         set(unzipped_entries[1]) - set(found_list)
     )
     raise IndicatorFieldError(f"Unable to find indicator field {unfound}")
+
+
+def _setup_pantherlog_dir(pantherlog_dir: str, yaml) -> str:
+
+    cfg = _try_load_config(yaml)
+    pantherlog_dir = cfg.get("pantherlog_dir")
+
+    if pantherlog_dir is None:
+        raise PantherlogDirError(
+            "You must specify the pantherlog binary in either a commandline argument or in the configuration file."
+        )
+
+    if not Path(pantherlog_dir).is_file():
+        raise PantherlogDirError(
+            f"Unable to find pantherlog binary located at {pantherlog_dir}"
+        )
+    
+    return pantherlog_dir
+
+
+def _try_load_config(yaml) -> str:
+    with open("ezpantherlog.yaml", "r") as config:
+        return yaml.load(config)
 
 
 @click.command()
@@ -236,7 +257,7 @@ def main(
     yaml.indent(mapping=2, sequence=4, offset=2)
 
     if pantherlog_dir is None:
-        pantherlog_dir = _try_load_pantherlog_config(yaml)
+        pantherlog_dir = _setup_pantherlog_dir(pantherlog_dir, yaml)
 
     print("\n✨ Starting...")
 
@@ -332,8 +353,18 @@ def main(
         cur_yaml_test["result"] = json_formatted_str
         yaml.dump(cur_yaml_test, test_file_yaml)
 
+    _test_schema(CMDS["test"])
+
+    print(f"\n   -> {cwd}/{schema_file}")
+    print(f"   -> {cwd}/{schema_test_file}")
+
+    if indicator_field is None:
+        _print_indicator_string_message()
+
+
+def _test_schema(test_command: str) -> None:
     print(f"💫 Testing your schema")
-    proc = run(CMDS["test"])
+    proc = run(test_command)
     if "PASS" in str(proc.stderr):
         print(f"🌟 All tests passed!")
     else:
@@ -342,18 +373,14 @@ def main(
             f"pantherlog test failed. Exception from pantherlog: \n\n {err}"
         )
 
-    print(f"\n   -> {cwd}/{schema_file}")
-    print(f"   -> {cwd}/{schema_test_file}")
 
-    print("\n🚨 Remember to update your schema file with indicators.")
+def _print_indicator_string_message():
 
+    print("\n🚨 You didn't set any IoC fields!")
+    print("\n Remember to update your schema file with indicators.")
     print("\n   Reference:")
-    print(
-        "    - https://docs.runpanther.io/development/writing-parsers#indicator-strings"
-    )
-    print(
-        "    - https://docs.runpanther.io/data-onboarding/custom-log-types/reference#indicators"
-    )
+    print("    - https://docs.runpanther.io/development/writing-parsers#indicator-strings")
+    print("    - https://docs.runpanther.io/data-onboarding/custom-log-types/reference#indicators")
 
 
 if __name__ == "__main__":
