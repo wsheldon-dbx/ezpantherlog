@@ -114,17 +114,23 @@ def _is_event_time_field_missing(schema: dict, event_time_field: str) -> bool:
     return False
 
 
-def _is_ioc_field_missing(schema: dict, indicator_field: tuple) -> bool:
+def _is_ioc_field_missing(schema: dict, indicator_field: tuple) -> None:
     found = 0
+    found_list = []
+    unzipped_entries = list(zip(*indicator_field))
     for value in schema["fields"]:
-        for ioc, field in indicator_field:
-            if value["name"] == ifield:
+        for indicator_type in unzipped_entries[1]:
+            if value["name"] == indicator_type:
+                found_list.append(indicator_type)
                 found += 1
-        
-        if found > 0:
-            return True
 
-    return False
+        if found == len(unzipped_entries[1]):
+            return
+
+    unfound = list(set(found_list) - set(unzipped_entries[1])) + list(set(unzipped_entries[1]) - set(found_list))
+    raise IndicatorFieldError(
+        f"Unable to find indicator field {unfound}"
+    )
 
 
 @click.command()
@@ -243,6 +249,8 @@ def main(
             raise EventTimeFieldError(
                 f"Unable to find eventTimeField {event_time_field}"
             )
+
+        _is_ioc_field_missing(schema, indicator_field)
 
         for field in schema["fields"]:
             if field["name"] == event_time_field:
