@@ -78,6 +78,14 @@ def _validate_schema_name(ctx: Optional, param: Optional, value: str) -> str:
 
     return value
 
+
+def _try_load_pantherlog_config(yaml) -> str:
+    with open("ezpantherlog.yaml", "r") as config:
+        cfg = yaml.load(config)
+
+    return cfg["pantherlog_dir"]
+
+
 def _validate_indicator_field(ctx: Optional, param: Optional, value: str) -> str:
 
     INDICATOR_TYPES = [
@@ -144,8 +152,8 @@ def _is_ioc_field_missing(schema: dict, indicator_field: tuple) -> None:
 )
 @click.option(
     "--pantherlog-dir",
-    required=True,
-    prompt=True,
+    required=False,
+    prompt=False,
     type=click.Path(exists=True, file_okay=True),
     help="The full path to your pantherlog binary; evaluated relative to the current path, not the git root.",
 )
@@ -216,9 +224,13 @@ def main(
     json_field: str,
 ) -> None:
 
-    print("\n✨ Starting...")
     yaml = ruamel.yaml.YAML()
     yaml.indent(mapping=2, sequence=4, offset=2)
+
+    if pantherlog_dir is None:
+        pantherlog_dir = _try_load_pantherlog_config(yaml) 
+
+    print("\n✨ Starting...")
 
     cwd = os.getcwd()
     schema_file = schema_file_name + ".yml"
