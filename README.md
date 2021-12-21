@@ -48,7 +48,9 @@ python3 ezpantherlog.py --pantherlog-dir=/Users/wsheldon/Tools/pantherlog1.21 \
                         --schema-file-name=vpn \
                         --time-format=rfc3339 \
                         --json-field=message \
-                        --json-field=appName
+                        --json-field=appName \
+                        --indicator-field=email actor_email \
+                        --indicator-field=username actor
                         
 
 ✨ Starting...
