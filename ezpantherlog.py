@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import json
+import itertools
 import subprocess
 import ruamel.yaml
 from typing import Optional, List, Union, Any
@@ -19,6 +20,9 @@ class SchemaNameError(Exception):
 class EventTimeFieldError(Exception):
     pass
 
+class IndicatorFieldError(Exception):
+    pass
+
 class TimeFormatError(Exception):
     pass
 
@@ -34,6 +38,8 @@ def run(cmd: str, return_list: bool = False) -> Union[List[str], Any]:
 
 
 def _validate_logs(ctx: Optional, param: Optional, value: str) -> str:
+    last_line = str()
+    first_line = str()
     with open(value, "r") as file:
         first_line = file.readline()
         for last_line in file:
@@ -72,19 +78,31 @@ def _validate_schema_name(ctx: Optional, param: Optional, value: str) -> str:
 
     return value
 
+def _validate_indicator_field(ctx: Optional, param: Optional, value: str) -> str:
 
-def _validate_time_format(ctx: Optional, param: Optional, value: str) -> str:
-
-    BUILT_IN_FORMATS = [
-        'rfc3339',
-        'unix',
-        'unix_ms',
-        'unix_us',
-        'unix_ns',
+    INDICATOR_TYPES = [
+        'ip', 
+        'domain',
+        'hostname',
+        'url',
+        'net_addr',
+        'sha256',
+        'sha1',
+        'md5',
+        'trace_id',
+        'aws_arn',
+        'aws_instance_id',
+        'aws_account_id',
+        'aws_tag',
+        'username',
+        'email'
     ]
 
-    if value not in BUILT_IN_FORMATS and value is not None:
-        raise TimeFormatError(f"{value} is not a valid time format, must be one of {BUILT_IN_FORMATS}")
+    unzipped_entries = list(zip(*value))
+
+    for indicator_type in unzipped_entries[0]:
+        if indicator_type not in INDICATOR_TYPES:
+            raise IndicatorFieldError(f"{indicator_type} is not a valid indicator type format, must be one of {INDICATOR_TYPES}")
 
     return value
 
@@ -93,6 +111,19 @@ def _is_event_time_field_missing(schema: dict, event_time_field: str) -> bool:
     for value in schema["fields"]:
         if value["name"] == event_time_field:
             return True
+    return False
+
+
+def _is_ioc_field_missing(schema: dict, indicator_field: tuple) -> bool:
+    found = 0
+    for value in schema["fields"]:
+        for ioc, field in indicator_field:
+            if value["name"] == ifield:
+                found += 1
+        
+        if found > 0:
+            return True
+
     return False
 
 
@@ -138,9 +169,27 @@ def _is_event_time_field_missing(schema: dict, event_time_field: str) -> bool:
     "--time-format",
     required=False,
     prompt=False,
-    callback=_validate_time_format,
-    type=str,
+    type=click.Choice(
+        [
+            'rfc3339',
+            'unix',
+            'unix_ms',
+            'unix_us',
+            'unix_ns',
+        ], 
+        case_sensitive=True,
+    ),
     help="Timestamps are defined by setting the type field to timestamp and specifying the timestamp format using the timeFormat field.",
+)
+@click.option(
+    '--indicator-field',
+    prompt=False,
+    required=False,
+    callback=_validate_indicator_field,
+    type=str,
+    nargs=2,
+    multiple=True,
+    help="Adds an indicator type to a speficial field; format is {indicator type}} {{field_name}}",
 )
 @click.option(
     "--json-field",
@@ -156,6 +205,7 @@ def main(
     schema_name: str,
     schema_file_name: str,
     event_time_field: str,
+    indicator_field: tuple,
     time_format: str,
     json_field: str,
 ) -> None:
@@ -201,6 +251,11 @@ def main(
 
                 if time_format:
                     field["timeFormat"] = time_format
+
+            if indicator_field:
+                for ioc, ifield in indicator_field:
+                    if field["name"] == ifield:
+                        field["indicators"] = [ioc]
 
             if json_field:
                 for jfield in json_field:
